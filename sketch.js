@@ -1,3 +1,7 @@
+// Фиксируем идеальное разрешение (Виртуальный холст 16:9)
+const VW = 1920; 
+const VH = 1080;
+
 // Настройки стадий сетки
 let stageCols = [2, 5, 10, 13, 16, 36];
 let stageRows = [2, 5, 10, 13, 16, 19];
@@ -84,7 +88,7 @@ class Cell {
   }
 }
 
-// Загружаем картинку и текст из файла, который лежит в репозитории
+// Загружаем картинку и текст из файла, который лежит в репозитории на GitHub
 function preload() {
   logo = loadImage("onetarget_logo.svg");
   
@@ -94,7 +98,7 @@ function preload() {
 }
 
 function setup() {
-  createCanvas(windowWidth, windowHeight);
+  createCanvas(windowWidth, windowHeight); // Окно браузера
 
   colDefault = color("#C9CBD0");       
   colFocus = color("#172BC0");         
@@ -118,12 +122,24 @@ function draw() {
     }
   }
   
+  // Белый фон на весь реальный экран
   background(255);
   
+  // ВЫЧИСЛЯЕМ МАСШТАБ
+  let scaleFactor = min(windowWidth / VW, windowHeight / VH);
+  let offsetX = (windowWidth - VW * scaleFactor) / 2;
+  let offsetY = (windowHeight - VH * scaleFactor) / 2;
+  
+  // ПРИМЕНЯЕМ МАСШТАБ КО ВСЕМУ, ЧТО РИСУЕТСЯ НИЖЕ
+  push();
+  translate(offsetX, offsetY);
+  scale(scaleFactor);
+  
+  // Используем VW и VH вместо реальной ширины окна для позиционирования
   let totalW = 36 * 40 + 35 * 10;
   let totalH = 19 * 40 + 18 * 10;
-  let startX = (width - totalW) / 2 + 20;  
-  let startY = height - (height - totalH) / 2 - 20; 
+  let startX = (VW - totalW) / 2 + 20;  
+  let startY = VH - (VH - totalH) / 2 - 20; 
   
   for (let c = 0; c < 36; c++) {
     for (let r = 0; r < 19; r++) {
@@ -137,6 +153,8 @@ function draw() {
     image(logo, 1668, 70, 182, 36.11);
     noTint(); 
   }
+  
+  pop(); // Заканчиваем масштабирование
 }
 
 function windowResized() {
@@ -175,14 +193,15 @@ function keyPressed() {
 }
 
 function exportToSVG() {
+  // Экспорт ВСЕГДА происходит в жестких рамках 1920x1080 (16:9)
   let svg = `<?xml version="1.0" encoding="utf-8"?>\n`;
-  svg += `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}">\n`;
+  svg += `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${VW} ${VH}" width="${VW}" height="${VH}">\n`;
   svg += `<rect width="100%" height="100%" fill="white"/>\n`;
   
   let totalW = 36 * 40 + 35 * 10;
   let totalH = 19 * 40 + 18 * 10;
-  let startX = (width - totalW) / 2 + 20;  
-  let startY = height - (height - totalH) / 2 - 20; 
+  let startX = (VW - totalW) / 2 + 20;  
+  let startY = VH - (VH - totalH) / 2 - 20; 
   
   // Рисуем сетку
   for (let c = 0; c < 36; c++) {
@@ -207,15 +226,10 @@ function exportToSVG() {
     }
   }
   
-  // ВНЕДРЯЕМ ВЕКТОРНЫЙ ЛОГОТИП В ЭКСПОРТ (через Base64 Data-URI)
+  // ВНЕДРЯЕМ ВЕКТОРНЫЙ ЛОГОТИП В ЭКСПОРТ
   if (logoSvgText !== "") {
-    // 1. Перекрашиваем все элементы логотипа в нужный цвет #A3A7B2
     let coloredLogo = logoSvgText.replace(/fill="[^"]*"/gi, 'fill="#A3A7B2"');
-    
-    // 2. Кодируем строку SVG в формат Base64 (безопасно для любых символов)
     let base64Logo = btoa(unescape(encodeURIComponent(coloredLogo)));
-    
-    // 3. Вставляем как независимый масштабируемый image
     svg += `<image href="data:image/svg+xml;base64,${base64Logo}" x="1668" y="70" width="182" height="36.11" />\n`;
   }
   
@@ -231,7 +245,7 @@ function exportToSVG() {
   document.body.removeChild(link);
   URL.revokeObjectURL(url);
   
-  console.log("Exported clean custom SVG with perfect Base64 vector logo!");
+  console.log("Exported clean custom SVG with perfect Base64 vector logo at 1920x1080!");
 }
 
 function activateGrid(stage, withDelay) {
@@ -264,10 +278,18 @@ function activateGrid(stage, withDelay) {
 }
 
 function mousePressed() {
+  // Вычисляем виртуальные координаты мыши с учетом масштаба!
+  let scaleFactor = min(windowWidth / VW, windowHeight / VH);
+  let offsetX = (windowWidth - VW * scaleFactor) / 2;
+  let offsetY = (windowHeight - VH * scaleFactor) / 2;
+  
+  let vMouseX = (mouseX - offsetX) / scaleFactor;
+  let vMouseY = (mouseY - offsetY) / scaleFactor;
+  
   let totalW = 36 * 40 + 35 * 10;
   let totalH = 19 * 40 + 18 * 10;
-  let startX = (width - totalW) / 2 + 20;
-  let startY = height - (height - totalH) / 2 - 20;
+  let startX = (VW - totalW) / 2 + 20;
+  let startY = VH - (VH - totalH) / 2 - 20;
   
   let clickedC = -1;
   let clickedR = -1;
@@ -281,7 +303,8 @@ function mousePressed() {
         continue;
       }
       
-      if (dist(mouseX, mouseY, cx, cy) <= 20) {
+      // Проверяем дистанцию до ВИРТУАЛЬНОЙ мыши
+      if (dist(vMouseX, vMouseY, cx, cy) <= 20) {
         if (grid[c][r].state > 0) {
           clickedC = c;
           clickedR = r;
