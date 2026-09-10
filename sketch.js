@@ -121,8 +121,8 @@ function setup() {
 
   colDefault = color("#C9CBD0");       
   colFocus = focusColors[0];           // Стартуем с 02CC13
-  colFocusRelated = colDefault;        // Теперь цвет обводки такой же как default!
-  colAfterImpact = colFocus;           // Синхронизируем AfterImpact
+  colFocusRelated = colDefault;        // Обводка такого же цвета как default
+  colAfterImpact = colDefault;         // After Impact теперь тоже СЕРЫЙ
   colLogo = color("#A3A7B2");          
   
   resetSketch(); 
@@ -198,12 +198,12 @@ function keyPressed() {
   if (key >= '1' && key <= '8') {
     let index = int(key) - 1;
     colFocus = focusColors[index];
-    colAfterImpact = focusColors[index]; // After Impact тоже меняет цвет
     
-    // Мгновенно обновляем цвета у уже активных ячеек
+    // Мгновенно обновляем цвет только у ТЕКУЩЕЙ точки фокуса (state 2)
+    // state 4 (After Impact) мы больше не трогаем, она остается серой
     for (let c = 0; c < 36; c++) {
       for (let r = 0; r < 19; r++) {
-        if (grid[c][r].state === 2 || grid[c][r].state === 4) {
+        if (grid[c][r].state === 2) {
           grid[c][r].tarColor = colFocus;
         }
       }
@@ -353,7 +353,7 @@ function handleFocus(target) {
   if (currentFocus !== null) {
     currentFocus.state = 4;
     currentFocus.tarStroke = 20;
-    currentFocus.tarColor = colAfterImpact; 
+    currentFocus.tarColor = colAfterImpact; // Теперь это colDefault (серый)
   }
   
   currentFocus = target;
@@ -379,11 +379,8 @@ function applyFocusRelated(fc, fr, clickedStage) {
       if (c === fc && r === fr) continue; 
       
       let cell = grid[c][r];
-      
-      // НОВАЯ КВАДРАТНАЯ ДИСТАНЦИЯ (Расстояние Чебышёва)
       let d = max(abs(c - fc), abs(r - fr)); 
       
-      // Поскольку d теперь всегда целое число (разница колонок/строк), мы проверяем просто d <= R
       if (d <= R) { 
         let sWeight;
         
@@ -400,7 +397,6 @@ function applyFocusRelated(fc, fr, clickedStage) {
           if (sWeight > cell.tarStroke) {
             cell.tarStroke = sWeight;
           }
-          // Применяем цвет colFocusRelated (который теперь равен colDefault)
           cell.tarColor = colFocusRelated; 
         }
       }
