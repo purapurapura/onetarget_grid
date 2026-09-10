@@ -11,8 +11,8 @@ let currentStage = 0;
 
 // Массив цветов фокуса
 let focusColorsHex = [
-  "#172BC0", // 1
-  "#02CC13", // 2
+  "#02CC13", // 1
+  "#172BC0", // 2
   "#00BAE8", // 3
   "#782ECC", // 4
   "#D7249E", // 5
@@ -103,26 +103,17 @@ class Cell {
   }
 }
 
-// ПРЕЛОАД ЛОГОТИПА ВРЕМЕННО ОТКЛЮЧЕН
-// function preload() {
-//   logo = loadImage("onetarget_logo.svg");
-//   loadStrings("onetarget_logo.svg", function(result) {
-//     logoSvgText = result.join('\n');
-//   });
-// }
-
 function setup() {
   createCanvas(windowWidth, windowHeight); 
 
-  // Инициализируем массив цветов
   for (let i = 0; i < focusColorsHex.length; i++) {
     focusColors.push(color(focusColorsHex[i]));
   }
 
   colDefault = color("#C9CBD0");       
-  colFocus = focusColors[0];           // Стартуем с 02CC13
-  colFocusRelated = colDefault;        // Обводка такого же цвета как default
-  colAfterImpact = colDefault;         // After Impact теперь тоже СЕРЫЙ
+  colFocus = focusColors[0];           
+  colFocusRelated = colDefault;        
+  colAfterImpact = colDefault;         
   colLogo = color("#A3A7B2");          
   
   resetSketch(); 
@@ -163,13 +154,6 @@ function draw() {
     }
   }
   
-  // ОТРИСОВКА ЛОГОТИПА ВРЕМЕННО ОТКЛЮЧЕНА
-  // if (logo) {
-  //   tint(colLogo);
-  //   image(logo, 1668, 70, 182, 36.11);
-  //   noTint(); 
-  // }
-  
   pop(); 
 }
 
@@ -194,13 +178,10 @@ function resetSketch() {
 }
 
 function keyPressed() {
-  // Переключение цветов фокуса по цифрам 1-8
   if (key >= '1' && key <= '8') {
     let index = int(key) - 1;
     colFocus = focusColors[index];
     
-    // Мгновенно обновляем цвет только у ТЕКУЩЕЙ точки фокуса (state 2)
-    // state 4 (After Impact) мы больше не трогаем, она остается серой
     for (let c = 0; c < 36; c++) {
       for (let r = 0; r < 19; r++) {
         if (grid[c][r].state === 2) {
@@ -242,11 +223,6 @@ function exportToSVG() {
       let x = startX + c * 50;
       let y = startY - r * 50; 
       
-      // ЗАПРЕТНАЯ ЗОНА ЭКСПОРТА ВРЕМЕННО ОТКЛЮЧЕНА
-      // if (x + 20 > 1668 && x - 20 < 1668 + 182 && y + 20 > 70 && y - 20 < 70 + 36.11) {
-      //   continue; 
-      // }
-      
       let hexCol = "#" + hex(round(cell.curR), 2) + hex(round(cell.curG), 2) + hex(round(cell.curB), 2);
       svg += `<circle cx="${x}" cy="${y}" r="${cell.curSize / 2}" fill="${hexCol}"/>\n`;
       
@@ -256,13 +232,6 @@ function exportToSVG() {
       }
     }
   }
-  
-  // ВНЕДРЕНИЕ ВЕКТОРНОГО ЛОГОТИПА ВРЕМЕННО ОТКЛЮЧЕНО
-  // if (logoSvgText !== "") {
-  //   let coloredLogo = logoSvgText.replace(/fill="[^"]*"/gi, 'fill="#A3A7B2"');
-  //   let base64Logo = btoa(unescape(encodeURIComponent(coloredLogo)));
-  //   svg += `<image href="data:image/svg+xml;base64,${base64Logo}" x="1668" y="70" width="182" height="36.11" />\n`;
-  // }
   
   svg += `</svg>`;
   
@@ -280,11 +249,15 @@ function exportToSVG() {
 function activateGrid(stage, withDelay) {
   let cols = stageCols[stage];
   let rows = stageRows[stage];
-  let prevBase = (stage > 0) ? (stageCols[stage-1] + stageRows[stage-1]) : 0;
+  
+  // Получаем границы предыдущей стадии
+  let prevCols = (stage > 0) ? stageCols[stage-1] : 0;
+  let prevRows = (stage > 0) ? stageRows[stage-1] : 0;
   
   for (let c = 0; c < cols; c++) {
     for (let r = 0; r < rows; r++) {
       let cell = grid[c][r];
+      
       if (cell.state === 0) { 
         cell.state = 1;
         cell.tarSize = 40;          
@@ -294,8 +267,18 @@ function activateGrid(stage, withDelay) {
         if (withDelay) {
           cell.curSize = 0;         
           cell.curStroke = 20;      
-          let distOffset = max(0, (c + r) - prevBase + 2);
-          cell.delay = distOffset * 3; 
+          
+          // ВЫЧИСЛЯЕМ L-ОБРАЗНЫЙ СЛОЙ (УГОЛОК)
+          // Насколько новая ячейка отдалена от старой сетки по X и по Y
+          let layerC = c - prevCols + 1;
+          let layerR = r - prevRows + 1;
+          
+          // Слой — это максимальное отклонение.
+          let layer = max(layerC, layerR); 
+          
+          // Множитель 4 дает плавную, но быструю волну (можете поменять на 3 или 5)
+          cell.delay = layer * 4; 
+          
         } else {
           cell.curSize = 40;
           cell.curStroke = 1;
@@ -327,11 +310,6 @@ function mousePressed() {
       let cx = startX + c * 50;
       let cy = startY - r * 50;
       
-      // ЗАПРЕТНАЯ ЗОНА КЛИКА ВРЕМЕННО ОТКЛЮЧЕНА
-      // if (cx + 20 > 1668 && cx - 20 < 1668 + 182 && cy + 20 > 70 && cy - 20 < 70 + 36.11) {
-      //   continue;
-      // }
-      
       if (dist(vMouseX, vMouseY, cx, cy) <= 20) {
         if (grid[c][r].state > 0) {
           clickedC = c;
@@ -353,7 +331,7 @@ function handleFocus(target) {
   if (currentFocus !== null) {
     currentFocus.state = 4;
     currentFocus.tarStroke = 20;
-    currentFocus.tarColor = colAfterImpact; // Теперь это colDefault (серый)
+    currentFocus.tarColor = colAfterImpact; 
   }
   
   currentFocus = target;
