@@ -9,6 +9,19 @@ let clickRadii = [1, 2, 4, 6, 7, 9];
 let maxStage = 5; 
 let currentStage = 0;
 
+// Массив цветов фокуса
+let focusColorsHex = [
+  "#02CC13", // 1
+  "#172BC0", // 2
+  "#00BAE8", // 3
+  "#782ECC", // 4
+  "#D7249E", // 5
+  "#E9C242", // 6
+  "#F77A1A", // 7
+  "#E01D1D"  // 8
+];
+let focusColors = [];
+
 let colDefault, colFocus, colFocusRelated, colAfterImpact, colLogo;
 
 let pendingStage = -1;
@@ -18,8 +31,9 @@ let EXPANSION_DELAY_FRAMES = 40;
 
 let isRecording = false; 
 
-let logo; 
-let logoSvgText = ""; // Сюда загрузится текстовый код из локального файла
+// ЛОГОТИП ВРЕМЕННО ОТКЛЮЧЕН
+// let logo; 
+// let logoSvgText = ""; 
 let grid = [];
 let currentFocus = null;
 
@@ -34,12 +48,12 @@ class Cell {
     this.curStroke = 0;
     this.tarStroke = 0;
     
-    this.tarColor = colDefault;
-    this.curColor = colDefault;
+    this.tarColor = color("#C9CBD0"); // fallback default
+    this.curColor = color("#C9CBD0");
     
-    this.curR = red(colDefault);
-    this.curG = green(colDefault);
-    this.curB = blue(colDefault);
+    this.curR = red(this.tarColor);
+    this.curG = green(this.tarColor);
+    this.curB = blue(this.tarColor);
     this.delay = 0; 
   }
   
@@ -72,9 +86,10 @@ class Cell {
     let x = startX + this.c * 50;
     let y = startY - this.r * 50; 
     
-    if (x + 20 > 1668 && x - 20 < 1668 + 182 && y + 20 > 70 && y - 20 < 70 + 36.11) {
-      return; 
-    }
+    // ЗАПРЕТНАЯ ЗОНА ВРЕМЕННО ОТКЛЮЧЕНА
+    // if (x + 20 > 1668 && x - 20 < 1668 + 182 && y + 20 > 70 && y - 20 < 70 + 36.11) {
+    //   return; 
+    // }
     
     noStroke();
     fill(this.curColor);
@@ -88,22 +103,26 @@ class Cell {
   }
 }
 
-// Загружаем картинку и текст из файла, который лежит в репозитории на GitHub
-function preload() {
-  logo = loadImage("onetarget_logo.svg");
-  
-  loadStrings("onetarget_logo.svg", function(result) {
-    logoSvgText = result.join('\n');
-  });
-}
+// ПРЕЛОАД ЛОГОТИПА ВРЕМЕННО ОТКЛЮЧЕН
+// function preload() {
+//   logo = loadImage("onetarget_logo.svg");
+//   loadStrings("onetarget_logo.svg", function(result) {
+//     logoSvgText = result.join('\n');
+//   });
+// }
 
 function setup() {
-  createCanvas(windowWidth, windowHeight); // Окно браузера
+  createCanvas(windowWidth, windowHeight); 
+
+  // Инициализируем массив цветов
+  for (let i = 0; i < focusColorsHex.length; i++) {
+    focusColors.push(color(focusColorsHex[i]));
+  }
 
   colDefault = color("#C9CBD0");       
-  colFocus = color("#172BC0");         
-  colFocusRelated = color("#03D2FF");  
-  colAfterImpact = color("#03D2FF");   
+  colFocus = focusColors[0];           // Стартуем с 02CC13
+  colFocusRelated = colDefault;        // Теперь цвет обводки такой же как default!
+  colAfterImpact = colFocus;           // Синхронизируем AfterImpact
   colLogo = color("#A3A7B2");          
   
   resetSketch(); 
@@ -122,20 +141,16 @@ function draw() {
     }
   }
   
-  // Белый фон на весь реальный экран
   background(255);
   
-  // ВЫЧИСЛЯЕМ МАСШТАБ
   let scaleFactor = min(windowWidth / VW, windowHeight / VH);
   let offsetX = (windowWidth - VW * scaleFactor) / 2;
   let offsetY = (windowHeight - VH * scaleFactor) / 2;
   
-  // ПРИМЕНЯЕМ МАСШТАБ КО ВСЕМУ, ЧТО РИСУЕТСЯ НИЖЕ
   push();
   translate(offsetX, offsetY);
   scale(scaleFactor);
   
-  // Используем VW и VH вместо реальной ширины окна для позиционирования
   let totalW = 36 * 40 + 35 * 10;
   let totalH = 19 * 40 + 18 * 10;
   let startX = (VW - totalW) / 2 + 20;  
@@ -148,13 +163,14 @@ function draw() {
     }
   }
   
-  if (logo) {
-    tint(colLogo);
-    image(logo, 1668, 70, 182, 36.11);
-    noTint(); 
-  }
+  // ОТРИСОВКА ЛОГОТИПА ВРЕМЕННО ОТКЛЮЧЕНА
+  // if (logo) {
+  //   tint(colLogo);
+  //   image(logo, 1668, 70, 182, 36.11);
+  //   noTint(); 
+  // }
   
-  pop(); // Заканчиваем масштабирование
+  pop(); 
 }
 
 function windowResized() {
@@ -178,6 +194,22 @@ function resetSketch() {
 }
 
 function keyPressed() {
+  // Переключение цветов фокуса по цифрам 1-8
+  if (key >= '1' && key <= '8') {
+    let index = int(key) - 1;
+    colFocus = focusColors[index];
+    colAfterImpact = focusColors[index]; // After Impact тоже меняет цвет
+    
+    // Мгновенно обновляем цвета у уже активных ячеек
+    for (let c = 0; c < 36; c++) {
+      for (let r = 0; r < 19; r++) {
+        if (grid[c][r].state === 2 || grid[c][r].state === 4) {
+          grid[c][r].tarColor = colFocus;
+        }
+      }
+    }
+  }
+
   if (key === 'q' || key === 'Q') {
     resetSketch();
   }
@@ -193,7 +225,6 @@ function keyPressed() {
 }
 
 function exportToSVG() {
-  // Экспорт ВСЕГДА происходит в жестких рамках 1920x1080 (16:9)
   let svg = `<?xml version="1.0" encoding="utf-8"?>\n`;
   svg += `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${VW} ${VH}" width="${VW}" height="${VH}">\n`;
   svg += `<rect width="100%" height="100%" fill="white"/>\n`;
@@ -203,7 +234,6 @@ function exportToSVG() {
   let startX = (VW - totalW) / 2 + 20;  
   let startY = VH - (VH - totalH) / 2 - 20; 
   
-  // Рисуем сетку
   for (let c = 0; c < 36; c++) {
     for (let r = 0; r < 19; r++) {
       let cell = grid[c][r];
@@ -212,9 +242,10 @@ function exportToSVG() {
       let x = startX + c * 50;
       let y = startY - r * 50; 
       
-      if (x + 20 > 1668 && x - 20 < 1668 + 182 && y + 20 > 70 && y - 20 < 70 + 36.11) {
-        continue; 
-      }
+      // ЗАПРЕТНАЯ ЗОНА ЭКСПОРТА ВРЕМЕННО ОТКЛЮЧЕНА
+      // if (x + 20 > 1668 && x - 20 < 1668 + 182 && y + 20 > 70 && y - 20 < 70 + 36.11) {
+      //   continue; 
+      // }
       
       let hexCol = "#" + hex(round(cell.curR), 2) + hex(round(cell.curG), 2) + hex(round(cell.curB), 2);
       svg += `<circle cx="${x}" cy="${y}" r="${cell.curSize / 2}" fill="${hexCol}"/>\n`;
@@ -226,12 +257,12 @@ function exportToSVG() {
     }
   }
   
-  // ВНЕДРЯЕМ ВЕКТОРНЫЙ ЛОГОТИП В ЭКСПОРТ
-  if (logoSvgText !== "") {
-    let coloredLogo = logoSvgText.replace(/fill="[^"]*"/gi, 'fill="#A3A7B2"');
-    let base64Logo = btoa(unescape(encodeURIComponent(coloredLogo)));
-    svg += `<image href="data:image/svg+xml;base64,${base64Logo}" x="1668" y="70" width="182" height="36.11" />\n`;
-  }
+  // ВНЕДРЕНИЕ ВЕКТОРНОГО ЛОГОТИПА ВРЕМЕННО ОТКЛЮЧЕНО
+  // if (logoSvgText !== "") {
+  //   let coloredLogo = logoSvgText.replace(/fill="[^"]*"/gi, 'fill="#A3A7B2"');
+  //   let base64Logo = btoa(unescape(encodeURIComponent(coloredLogo)));
+  //   svg += `<image href="data:image/svg+xml;base64,${base64Logo}" x="1668" y="70" width="182" height="36.11" />\n`;
+  // }
   
   svg += `</svg>`;
   
@@ -244,8 +275,6 @@ function exportToSVG() {
   link.click();
   document.body.removeChild(link);
   URL.revokeObjectURL(url);
-  
-  console.log("Exported clean custom SVG with perfect Base64 vector logo at 1920x1080!");
 }
 
 function activateGrid(stage, withDelay) {
@@ -278,7 +307,6 @@ function activateGrid(stage, withDelay) {
 }
 
 function mousePressed() {
-  // Вычисляем виртуальные координаты мыши с учетом масштаба!
   let scaleFactor = min(windowWidth / VW, windowHeight / VH);
   let offsetX = (windowWidth - VW * scaleFactor) / 2;
   let offsetY = (windowHeight - VH * scaleFactor) / 2;
@@ -299,11 +327,11 @@ function mousePressed() {
       let cx = startX + c * 50;
       let cy = startY - r * 50;
       
-      if (cx + 20 > 1668 && cx - 20 < 1668 + 182 && cy + 20 > 70 && cy - 20 < 70 + 36.11) {
-        continue;
-      }
+      // ЗАПРЕТНАЯ ЗОНА КЛИКА ВРЕМЕННО ОТКЛЮЧЕНА
+      // if (cx + 20 > 1668 && cx - 20 < 1668 + 182 && cy + 20 > 70 && cy - 20 < 70 + 36.11) {
+      //   continue;
+      // }
       
-      // Проверяем дистанцию до ВИРТУАЛЬНОЙ мыши
       if (dist(vMouseX, vMouseY, cx, cy) <= 20) {
         if (grid[c][r].state > 0) {
           clickedC = c;
@@ -351,9 +379,12 @@ function applyFocusRelated(fc, fr, clickedStage) {
       if (c === fc && r === fr) continue; 
       
       let cell = grid[c][r];
-      let d = dist(c, r, fc, fr); 
       
-      if (d <= R + 0.1) { 
+      // НОВАЯ КВАДРАТНАЯ ДИСТАНЦИЯ (Расстояние Чебышёва)
+      let d = max(abs(c - fc), abs(r - fr)); 
+      
+      // Поскольку d теперь всегда целое число (разница колонок/строк), мы проверяем просто d <= R
+      if (d <= R) { 
         let sWeight;
         
         if (R <= 1.0) {
@@ -369,6 +400,7 @@ function applyFocusRelated(fc, fr, clickedStage) {
           if (sWeight > cell.tarStroke) {
             cell.tarStroke = sWeight;
           }
+          // Применяем цвет colFocusRelated (который теперь равен colDefault)
           cell.tarColor = colFocusRelated; 
         }
       }
